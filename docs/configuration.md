@@ -29,20 +29,16 @@ The script reads the tokens from a `.env`-style file, **`~/.claude/claude-limits
 directory, outside the plugin and outside any repo, so plugin updates never overwrite it and it can't be committed by
 accident. The template is `skills/setup/claude-limits.tokens.example`.
 
+Create it with the `--init` flag of either script. It is the same on Linux, macOS and Windows: it creates the parent
+directory, copies the template, sets owner-only permissions (`chmod 600`, or `icacls` on Windows), prints the path and
+never overwrites an existing file. It makes no network request.
+
 ```bash
-# Linux / macOS / Git Bash, from a clone of the repo
-cp skills/setup/claude-limits.tokens.example ~/.claude/claude-limits.tokens
-chmod 600 ~/.claude/claude-limits.tokens
+node skills/usage/scripts/claude-limits.mjs --init            # or: python3 skills/usage/scripts/claude_limits.py --init
 ```
 
-```powershell
-# PowerShell, from a clone of the repo
-Copy-Item skills\setup\claude-limits.tokens.example "$HOME\.claude\claude-limits.tokens"
-icacls "$HOME\.claude\claude-limits.tokens" /inheritance:r /grant:r "${env:USERNAME}:(R,W)"
-```
-
-With the plugin installed there is no clone to copy from: use the setup skill, or create the file by hand with the
-format below.
+The `/subscription-limits:setup` skill runs exactly this, so it also works with the plugin installed (no clone needed).
+Then fill the file in by hand using the format below. To use another location, set `CLAUDE_LIMITS_TOKENS_FILE` first.
 
 One account per line, `name=token`. **You choose the names** (the left side); the script uses them in the output and as
 arguments.

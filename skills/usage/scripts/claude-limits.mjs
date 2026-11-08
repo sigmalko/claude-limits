@@ -8,6 +8,7 @@
 //                     <name>   every entry of the tokens file (see below)
 //     --brief       one line per account
 //     --json        machine-readable (an array, one object per account)
+//     --init        create the tokens file from the template (owner-only permissions), never overwrites; no network
 //
 // Tokens file: ~/.claude/claude-limits.tokens (outside the plugin, survives updates), or CLAUDE_LIMITS_TOKENS_FILE.
 // One account per line, name=token (a token made by `claude setup-token`; you choose the names), like a .env file.
@@ -31,6 +32,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const MODEL = process.env.CLAUDE_PROBE_MODEL || 'claude-haiku-5-5';
 const TZ = process.env.CLAUDE_LIMITS_TZ || process.env.TZ || 'Europe/Warsaw';
@@ -41,12 +43,37 @@ const brief = args.includes('--brief');
 const json = args.includes('--json');
 const wanted = args.filter((a) => !a.startsWith('--'));
 if (args.includes('-h') || args.includes('--help')) {
-  console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 29).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+  console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 30).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
   process.exit(0);
 }
-for (const a of args) if (a.startsWith('--') && !['--brief', '--json'].includes(a)) {
+for (const a of args) if (a.startsWith('--') && !['--brief', '--json', '--init'].includes(a)) {
   console.error(`claude-limits: unknown argument ${a}`); process.exit(2);
 }
+
+// --init: create the tokens file from the template with owner-only permissions. Never overwrites, never reads an existing file.
+function initTokensFile() {
+  const template = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'setup', 'claude-limits.tokens.example');
+  let data;
+  try { data = fs.readFileSync(template); } catch { console.error(`claude-limits: template not found: ${template}`); return 1; }
+  try {
+    fs.mkdirSync(path.dirname(TOKENS_FILE), { recursive: true });
+    fs.writeFileSync(TOKENS_FILE, data, { flag: 'wx', mode: 0o600 });
+  } catch (e) {
+    if (e.code === 'EEXIST') { console.log(`Tokens file already exists, left untouched: ${TOKENS_FILE}`); return 0; }
+    console.error(`claude-limits: cannot create ${TOKENS_FILE} (${e.code || e.message})`); return 1;
+  }
+  try {
+    if (process.platform === 'win32') {
+      execFileSync('icacls', [TOKENS_FILE, '/inheritance:r', '/grant:r', `${process.env.USERNAME || os.userInfo().username}:(R,W)`], { stdio: 'ignore', windowsHide: true });
+    } else fs.chmodSync(TOKENS_FILE, 0o600);
+  } catch (e) {
+    console.error(`claude-limits: created ${TOKENS_FILE} but could not restrict its permissions (${e.code || e.message}); restrict it to your user manually`); return 1;
+  }
+  console.log(`Created ${TOKENS_FILE} (owner-only permissions).`);
+  console.log('Next: run `claude setup-token` per account in a separate terminal, put each token in that file as name=sk-ant-oat01-... (remove the REPLACE_ME example lines), then run this script with --brief.');
+  return 0;
+}
+if (args.includes('--init')) process.exit(initTokensFile());
 
 const readFile = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
 
