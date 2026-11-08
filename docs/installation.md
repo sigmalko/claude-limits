@@ -2,9 +2,9 @@
 
 ## Prerequisites
 
-- **Node.js 18 or newer** (needs the built-in `fetch`). Developed and tested on Node 24. Not installed? See
-  [Install Node.js](#install-nodejs).
-- **Network access to `https://api.anthropic.com`** (works the same on Windows, Linux, macOS and in Docker).
+- **Node.js 18 or newer _or_ Python 3.9 or newer** (either one is enough; the skills pick whichever is installed, Node
+  first). Both versions use only the standard library. Neither installed? See [Install Node.js](#install-nodejs) or
+  [Install Python](#install-python).
 - **Claude subscription accounts** (Pro/Max). API-key accounts (`ANTHROPIC_API_KEY`) have no subscription windows and
   are not supported.
 - **A long-lived token per account**, created with `claude setup-token` (see [Configuration](configuration.md)). This
@@ -115,3 +115,18 @@ node --version   # should print v18.x or newer
 ```
 
 Other options and installers: <https://nodejs.org/en/download>.
+
+## Install Python
+
+Only needed if you prefer Python over Node.js. Check first: `python3 --version` (Linux/macOS) or `py -3 --version` /
+`python --version` (Windows) should print 3.9 or newer.
+
+- **Windows:** `winget install Python.Python.3.12`, then open a new terminal.
+- **macOS:** `brew install python`.
+- **Linux:** `sudo apt install python3` (or `dnf install python3`).
+
+On Windows the Microsoft Store stub named `python` is not a real interpreter; if `python --version` only opens the Store,
+use `py -3` or install Python as above.
+
+On Windows, Python has no IANA time-zone database by default and falls back to the local time zone for display; run
+`pip install tzdata` to get named zones such as `Europe/Warsaw`.

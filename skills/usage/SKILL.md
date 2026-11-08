@@ -3,7 +3,7 @@ name: usage
 description: Show usage of the Claude subscription limits (5-hour and weekly window) and their reset times for the current account and every account in ~/.claude/claude-limits.tokens.
 disable-model-invocation: true
 argument-hint: "[account ...] [--brief] [--json]"
-allowed-tools: Bash(node *claude-limits.mjs*), Bash(node --version)
+allowed-tools: Bash(node *claude-limits.mjs*), Bash(node --version), Bash(python3 *claude_limits.py*), Bash(python *claude_limits.py*), Bash(py *claude_limits.py*), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
 ---
 
 # Claude limits
@@ -14,13 +14,28 @@ fraction of a limit. Run it only when the user asked for it.
 
 ## Steps
 
-1. Run `node --version`. If Node is missing or older than v18, tell the user to install it
-   (`winget install OpenJS.NodeJS.LTS` on Windows, `brew install node` on macOS, nvm on Linux) and stop.
+1. Pick a runtime. The tool exists in two identical versions, so use whichever the machine has:
+   1. Run `node --version`. If it prints v18 or newer, use Node (step 2a).
+   2. Otherwise try Python 3.9+: `python3 --version` (Linux/macOS), then `python --version`, then `py -3 --version`
+      (Windows launcher). Use the first one that prints Python 3.9 or newer (step 2b).
+   3. If neither is available, tell the user to install Node.js 18+ or Python 3.9+
+      (`winget install OpenJS.NodeJS.LTS` or `winget install Python.Python.3.12` on Windows, `brew install node` on
+      macOS, the distro package or nvm on Linux) and stop.
 2. Run the script. Pass the user's arguments through (account names, `--brief`, `--json`); with no arguments use `--brief`:
+
+   a. Node:
 
    ```
    node "${CLAUDE_SKILL_DIR}/scripts/claude-limits.mjs" $ARGUMENTS
    ```
+
+   b. Python (replace `python3` with `python` or `py -3` as detected):
+
+   ```
+   python3 "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py" $ARGUMENTS
+   ```
+
+   Both versions print the same output and use the same exit codes.
 
 3. Summarise the result in the user's language: per account, percent used and left in the 5-hour window and in the
    week, when each resets, and flag any `[WARN]` or `[FAIL]`. Exit code 1 only means some account has a problem or

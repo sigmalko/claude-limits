@@ -2,7 +2,7 @@
 name: setup
 description: First-time setup for the usage skill. Creates ~/.claude/claude-limits.tokens from a template with owner-only permissions and walks the user through getting a token per account with `claude setup-token`, without ever seeing the tokens.
 disable-model-invocation: true
-allowed-tools: Bash(test *), Bash(mkdir *), Bash(cp *), Bash(chmod *), Bash(icacls *), Bash(node *claude-limits.mjs*), Bash(node --version)
+allowed-tools: Bash(test *), Bash(mkdir *), Bash(cp *), Bash(chmod *), Bash(icacls *), Bash(node *claude-limits.mjs*), Bash(node --version), Bash(python3 *claude_limits.py*), Bash(python *claude_limits.py*), Bash(py *claude_limits.py*), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
 ---
 
 # Set up claude-limits
@@ -12,7 +12,8 @@ result. **You never see, read, print or ask for a token.**
 
 ## Steps
 
-1. Check Node: run `node --version`. If it is missing or older than v18, tell the user to install Node 18+ and stop.
+1. Pick a runtime: `node --version` (needs v18+), otherwise `python3 --version` / `python --version` / `py -3 --version`
+   (needs Python 3.9+). If none works, tell the user to install Node.js 18+ or Python 3.9+ and stop.
 
 2. Check whether the file already exists, without reading it: `test -e ~/.claude/claude-limits.tokens && echo exists`.
    - If it exists, do **not** overwrite it. Skip to step 5 to verify it.
@@ -47,6 +48,7 @@ result. **You never see, read, print or ask for a token.**
 
    ```
    node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --brief
+   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief   # if Node is not available
    ```
 
    - `[ OK ]` lines: setup works. Point the user to `/subscription-limits:usage`.
