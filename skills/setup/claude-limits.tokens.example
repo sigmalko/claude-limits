@@ -1,0 +1,8 @@
+# Tokens file for claude-limits. Lives at ~/.claude/claude-limits.tokens (owner-only permissions, never commit it).
+# The easiest way to create it is the /subscription-limits:setup skill.
+# One account per line: name=token. You choose the name (left side); it is used in the output and as an argument.
+# Generate a token per account with `claude setup-token` (run it in a terminal, not in a chat).
+# Replace the REPLACE_ME lines and delete the ones you do not use.
+work_a=sk-ant-oat01-REPLACE_ME
+work_b=sk-ant-oat01-REPLACE_ME
+work_c=sk-ant-oat01-REPLACE_ME

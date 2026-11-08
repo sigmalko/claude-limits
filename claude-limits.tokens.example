@@ -1,9 +1,0 @@
-# Template for the tokens file. Copy it to ~/.claude/claude-limits.tokens and fill it in:
-#   Linux/macOS/Git Bash:  cp claude-limits.tokens.example ~/.claude/claude-limits.tokens && chmod 600 ~/.claude/claude-limits.tokens
-#   PowerShell:            Copy-Item claude-limits.tokens.example "$HOME\.claude\claude-limits.tokens"
-# One account per line: name=token. You choose the name (left side); the script uses it in the output
-# and as an argument: claude-limits.mjs work_a
-# Generate tokens with: claude setup-token
-work_a=sk-ant-oat01-REPLACE_ME
-work_b=sk-ant-oat01-REPLACE_ME
-work_c=sk-ant-oat01-REPLACE_ME
