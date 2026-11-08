@@ -4,8 +4,8 @@ Shows how much of the Claude Code **subscription limits** each of your accounts 
 weekly window, plus when each one resets. It works for many accounts at once.
 
 The repo is a **Claude Code plugin** (`subscription-limits`) and, at the same time, its own single-plugin marketplace.
-The core is one file with no dependencies, `bin/claude-limits.mjs` (Node.js built-ins only), which you can also run
-directly as a plain CLI.
+The core is one file with no dependencies, `skills/usage/scripts/claude-limits.mjs` (Node.js built-ins only). It sits
+next to the skill's `SKILL.md`, and you can also [run it by hand](#run-it-by-hand).
 
 > The plugin is called `subscription-limits`, not `claude-limits`: plugin names starting with `claude-` are reserved
 > for Anthropic. The repo, the script and the tokens file keep the `claude-limits` name.
@@ -144,16 +144,30 @@ Optional hardening: forbid Claude from reading the secrets at all, in `~/.claude
 { "permissions": { "deny": ["Read(~/.claude/claude-limits.tokens)", "Read(~/.claude/.credentials.json)"] } }
 ```
 
-## Run as a plain CLI
+## Run it by hand
 
-Without the plugin, from a clone of the repo:
+The script is a normal Node program, so you can run it without Claude (terminal, cron, CI).
+
+**Installed as a plugin** (the path contains the version, so the command looks the script up):
 
 ```bash
-node bin/claude-limits.mjs                 # all accounts: current + everything in the tokens file
-node bin/claude-limits.mjs work_a work_b   # only the named accounts
-node bin/claude-limits.mjs --brief         # one line per account
-node bin/claude-limits.mjs --json          # machine-readable (an array, one object per account)
-node bin/claude-limits.mjs --help
+# Linux / macOS / Git Bash
+node "$(find ~/.claude/plugins/cache -name claude-limits.mjs | head -1)" --brief
+```
+
+```powershell
+# PowerShell
+node (Get-ChildItem "$HOME\.claude\plugins\cache" -Recurse -Filter claude-limits.mjs | Select-Object -First 1).FullName --brief
+```
+
+**From a clone of the repo**, from the repo root:
+
+```bash
+node skills/usage/scripts/claude-limits.mjs                 # all accounts: current + everything in the tokens file
+node skills/usage/scripts/claude-limits.mjs work_a work_b   # only the named accounts
+node skills/usage/scripts/claude-limits.mjs --brief         # one line per account
+node skills/usage/scripts/claude-limits.mjs --json          # machine-readable (an array, one object per account)
+node skills/usage/scripts/claude-limits.mjs --help
 ```
 
 The command is the same in Bash and PowerShell.
@@ -178,14 +192,14 @@ Mount the repo (read-only is fine) and the tokens file, and run it with any Node
 
 ```bash
 # Linux / macOS / Git Bash (on Git Bash prefix with MSYS_NO_PATHCONV=1)
-docker run --rm -v "$PWD/bin:/app/bin:ro" -v "$HOME/.claude/claude-limits.tokens:/run/tokens:ro" \
-  -e CLAUDE_LIMITS_TOKENS_FILE=/run/tokens -w /app node:24-alpine node bin/claude-limits.mjs --brief
+docker run --rm -v "$PWD/skills/usage/scripts:/app/scripts:ro" -v "$HOME/.claude/claude-limits.tokens:/run/tokens:ro" \
+  -e CLAUDE_LIMITS_TOKENS_FILE=/run/tokens -w /app node:24-alpine node scripts/claude-limits.mjs --brief
 ```
 
 ```powershell
 # PowerShell
-docker run --rm -v "${PWD}/bin:/app/bin:ro" -v "$HOME\.claude\claude-limits.tokens:/run/tokens:ro" `
-  -e CLAUDE_LIMITS_TOKENS_FILE=/run/tokens -w /app node:24-alpine node bin/claude-limits.mjs --brief
+docker run --rm -v "${PWD}/skills/usage/scripts:/app/scripts:ro" -v "$HOME\.claude\claude-limits.tokens:/run/tokens:ro" `
+  -e CLAUDE_LIMITS_TOKENS_FILE=/run/tokens -w /app node:24-alpine node scripts/claude-limits.mjs --brief
 ```
 
 Inside a container there is no `~/.claude/.credentials.json`, so `current` is skipped and only the accounts from the
@@ -205,7 +219,7 @@ tokens file are checked.
 .claude-plugin/plugin.json       plugin manifest (name: subscription-limits)
 .claude-plugin/marketplace.json  makes the repo an installable marketplace (sigmalko-plugins)
 skills/usage/SKILL.md            the /subscription-limits:usage skill
-bin/claude-limits.mjs            the actual tool (also usable standalone)
+skills/usage/scripts/claude-limits.mjs   the actual tool (also runnable by hand)
 claude-limits.tokens.example     template of the tokens file
 ```
 

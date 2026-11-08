@@ -19,7 +19,7 @@ fraction of a limit. Run it only when the user asked for it.
 2. Run the script. Pass the user's arguments through (account names, `--brief`, `--json`); with no arguments use `--brief`:
 
    ```
-   node "${CLAUDE_PLUGIN_ROOT}/bin/claude-limits.mjs" $ARGUMENTS
+   node "${CLAUDE_SKILL_DIR}/scripts/claude-limits.mjs" $ARGUMENTS
    ```
 
 3. Summarise the result in the user's language: per account, percent used and left in the 5-hour window and in the
