@@ -20,9 +20,35 @@ All notable changes to this project are documented here. The format follows
 - Tighter `allowed-tools` patterns in both skills (#8).
 - The default time zone is the system zone instead of Europe/Warsaw (#3).
 - `--help` prints an explicit usage text instead of a slice of the source (#7).
+- Docs: the Node version does not use HTTP(S)_PROXY, the Python version does (docs/configuration.md).
 
 ### Fixed
 - Placeholder `REPLACE_ME` tokens are no longer sent to the API (#4).
+- Node no longer crashes on an invalid time zone (`CLAUDE_LIMITS_TZ=Bogus/Zone`, `TZ=CET-1`, `TZ=UTC0`): both scripts
+  fall back to the system zone and then to a UTC-offset label like `UTC+02:00`.
+- Python no longer crashes on non-UTF-8 files, a non-numeric `expiresAt` or non-numeric rate-limit headers. Tokens files in
+  UTF-8 (with or without BOM) and UTF-16 (with BOM) are read, other encodings give a clear error. A bad account never
+  aborts the others.
+- Missing or invalid rate-limit headers are an error for that account instead of "reset in now" or `NaN%`.
+- `--json` is identical in both scripts: `subscription` is always present (`null` when unknown), integral numbers are
+  printed as `1` / `0`, and a missing status is shown as `?` in text output.
+- Python splits the tokens file on `\r?\n` only, like Node. `=` inside an unnamed token (base64 padding) no longer
+  makes it a named one: a name must match `[A-Za-z0-9_.-]+` and the token must not start with `=`.
+- `--init`: if restricting the permissions fails, the new file is deleted and the exit code is 1; an existing file is
+  reported as "already exists, left untouched" without being read; a parent path that is a file gets its own error.
+- With a custom `CLAUDE_CONFIG_DIR` and no `.credentials.json`, `current` no longer falls back to the macOS Keychain item
+  of the default account.
+- The `py` allowed-tools pattern of the usage skill did not match the `py -3` the skill runs; the patterns now match
+  exactly what the skill bodies tell the model to run (`node`, `python3`, `python`, `py -3`).
+
+### Security
+- A token with a raw CR/LF or any other character outside printable ASCII is rejected before the request, and exception
+  messages are never printed (Node used to print `Headers.append: "Bearer <token>" is an invalid header value`).
+- `icacls.exe` and `whoami.exe` run by absolute path from `%SystemRoot%\System32`, never via PATH or the current
+  directory; the tokens file is restricted to the current user's SID.
+- `allowed-tools` patterns no longer start with a `*` wildcard that can span quotes: they are pinned to
+  `${CLAUDE_SKILL_DIR}` and the setup patterns are anchored at the start (remaining limits in docs/development.md).
+
 
 ### Development
 - `scripts/check-version.mjs` uses a readable regex (#10).

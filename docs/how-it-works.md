@@ -10,6 +10,11 @@ costs a negligible fraction of a limit. Tokens are never printed or passed on a 
 ## Limitations and security
 
 - The headers are undocumented (Claude Code itself relies on them) and may change or disappear.
+- If a response lacks one of the four usage/reset headers, or one is not a number, that account is reported as an error
+  (`[FAIL] name: incomplete rate-limit headers ...`) instead of showing made-up numbers; the other accounts still run.
+- A token with characters outside printable ASCII is rejected before any request, and error output never contains raw
+  exception messages (only error codes), so a malformed token cannot leak into the output.
+- The Node version does not use HTTP proxies (the Python version does); see [Configuration](configuration.md#proxies).
 - `HTTP 401` means the token is wrong, revoked or expired: generate a new one with `claude setup-token`.
 - Placeholder tokens (containing `REPLACE_ME`) are never sent; the `current` account with an expired access token is not
   probed either: run `claude` once to refresh it. Tokens are not refreshed by this tool.

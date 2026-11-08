@@ -52,12 +52,30 @@ Users then update with `/plugin marketplace update sigmalko-plugins` and
 
 ## Skill permissions
 
-`skills/usage/SKILL.md` pre-approves only the commands it runs, via `allowed-tools`. Each runtime gets two patterns, for
-example `Bash(node "*/skills/usage/scripts/claude-limits.mjs")` and the same followed by ` *` (arguments). The executable
-and the quoted script path (ending in `skills/usage/scripts/<script>`) are anchored, so `node /tmp/evil/claude-limits.mjs`
-or `node x.mjs` no longer match, and Claude Code does not let a prefix rule cover chained commands (`&&`, `;`, `|`).
+Both skills pre-approve only the commands they run, via `allowed-tools`, in one shape: the runtime (`node`, `python3`,
+`python` or `py -3`), the double-quoted script path starting with `${CLAUDE_SKILL_DIR}`, and fixed arguments. There is no
+leading `*` wildcard. Examples (the skill body tells the model to run exactly these strings):
 
-Limitation: the exact install directory is not known when the skill is written, and `${CLAUDE_SKILL_DIR}` is documented
-as substituted in the skill body, not in `allowed-tools`. So the leading directory is a `*` wildcard and cannot be pinned
-to this plugin. A same-named script under another `.../skills/usage/scripts/` directory would still match. If a pattern
-does not match on some platform, the only effect is a normal permission prompt (the skill is `disable-model-invocation`).
+```
+usage:  Bash(node "${CLAUDE_SKILL_DIR}/scripts/claude-limits.mjs")    and the same followed by " *" (user arguments)
+setup:  Bash(node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --init)    and the same with --brief
+```
+
+Why no `*` in front: a leading `*` can span quotes, so `node "evil.mjs" "x/skills/usage/scripts/claude-limits.mjs"` would fit
+`node "*/skills/usage/scripts/claude-limits.mjs"`, and it cannot be pinned to this plugin. Pinning the directory with
+`${CLAUDE_SKILL_DIR}` avoids that. The only wildcard left is the trailing ` *` (the user's arguments) in the usage skill;
+the script treats arguments as account names or flags only, and Claude Code does not let a prefix rule cover chained
+commands (`&&`, `;`, `|`).
+
+Remaining limitations (not verified against Claude Code itself):
+
+- It is unverified that `${CLAUDE_SKILL_DIR}` is expanded inside `allowed-tools` (it is documented for the skill body). The
+  patterns only match when the frontmatter and the body expand it to the same string. If it is not expanded, the pattern
+  never matches and every run shows a normal permission prompt. That is the safe outcome (both skills are
+  `disable-model-invocation`), at the cost of convenience.
+- The exact glob semantics of Claude Code's matcher (how `*` treats quotes and spaces, and how `py -3` with a space is
+  matched) are not verified here either. A pattern that does not match only causes a prompt.
+- The `--version` checks are exact strings and carry no risk.
+- What a user approves in a permission prompt for a different command is outside what these patterns control.
+
+If a pattern cannot be made strictly safe for a runtime, remove that runtime's pre-approval and accept the prompt.

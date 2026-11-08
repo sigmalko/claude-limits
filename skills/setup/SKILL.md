@@ -2,7 +2,7 @@
 name: setup
 description: First-time setup for the usage skill. Creates the tokens file (~/.claude/claude-limits.tokens) with owner-only permissions (via the scripts' `--init`) and walks the user through getting a token per account with `claude setup-token`, without ever seeing the tokens.
 disable-model-invocation: true
-allowed-tools: Bash(node *claude-limits.mjs" --init), Bash(node *claude-limits.mjs" --brief), Bash(python3 *claude_limits.py" --init), Bash(python3 *claude_limits.py" --brief), Bash(python *claude_limits.py" --init), Bash(python *claude_limits.py" --brief), Bash(py -3 *claude_limits.py" --init), Bash(py -3 *claude_limits.py" --brief), Bash(node --version), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
+allowed-tools: Bash(node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --init), Bash(node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --brief), Bash(python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init), Bash(python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief), Bash(python "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init), Bash(python "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief), Bash(py -3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init), Bash(py -3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief), Bash(node --version), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
 ---
 
 # Set up claude-limits
@@ -20,12 +20,16 @@ result. **You never see, read, print or ask for a token.**
 
 2. Create the tokens file with `--init`. It works the same on Linux, macOS and Windows: it creates the parent
    directory, copies the template, restricts the file to the current user, and **never overwrites an existing file**
-   (it then says "already exists" and does not read it). Always quote the script path:
+   (it then says "already exists" and does not read it). Run it exactly as written, as one plain command with the quoted
+   script path (no `cd`, pipes or redirections; the pre-approved permission patterns match only this exact form, anything
+   else just triggers a normal permission prompt):
 
    ```
    node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --init
-   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init   # if Node is not available (python / py -3 on Windows)
+   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init   # if Node is not available
    ```
+
+   For Python, replace `python3` with `python` or `py -3` as detected; nothing else changes.
 
    It prints the path of the file. If it fails, show the user the error and stop.
 
@@ -47,7 +51,7 @@ result. **You never see, read, print or ask for a token.**
 
    ```
    node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --brief
-   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief   # if Node is not available (python / py -3 on Windows)
+   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief   # if Node is not available (same runtime rule)
    ```
 
    - `[ OK ]` lines: setup works. Point the user to `/subscription-limits:usage`.
