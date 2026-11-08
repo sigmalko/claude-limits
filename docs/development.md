@@ -49,3 +49,15 @@ Changes users never receive (CI, tests, repo-only docs) need no release: note th
 `node scripts/check-version.mjs --tag vX.Y.Z` also verifies that the tag matches the version (handy in release CI).
 Users then update with `/plugin marketplace update sigmalko-plugins` and
 `/plugin update subscription-limits@sigmalko-plugins`.
+
+## Skill permissions
+
+`skills/usage/SKILL.md` pre-approves only the commands it runs, via `allowed-tools`. Each runtime gets two patterns, for
+example `Bash(node "*/skills/usage/scripts/claude-limits.mjs")` and the same followed by ` *` (arguments). The executable
+and the quoted script path (ending in `skills/usage/scripts/<script>`) are anchored, so `node /tmp/evil/claude-limits.mjs`
+or `node x.mjs` no longer match, and Claude Code does not let a prefix rule cover chained commands (`&&`, `;`, `|`).
+
+Limitation: the exact install directory is not known when the skill is written, and `${CLAUDE_SKILL_DIR}` is documented
+as substituted in the skill body, not in `allowed-tools`. So the leading directory is a `*` wildcard and cannot be pinned
+to this plugin. A same-named script under another `.../skills/usage/scripts/` directory would still match. If a pattern
+does not match on some platform, the only effect is a normal permission prompt (the skill is `disable-model-invocation`).

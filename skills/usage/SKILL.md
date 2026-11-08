@@ -3,7 +3,7 @@ name: usage
 description: Show usage of the Claude subscription limits (5-hour and weekly window) and their reset times for the current account and every account in ~/.claude/claude-limits.tokens.
 disable-model-invocation: true
 argument-hint: "[account ...] [--brief] [--json]"
-allowed-tools: Bash(node *claude-limits.mjs*), Bash(node --version), Bash(python3 *claude_limits.py*), Bash(python *claude_limits.py*), Bash(py *claude_limits.py*), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
+allowed-tools: Bash(node "*/skills/usage/scripts/claude-limits.mjs"), Bash(node "*/skills/usage/scripts/claude-limits.mjs" *), Bash(python3 "*/skills/usage/scripts/claude_limits.py"), Bash(python3 "*/skills/usage/scripts/claude_limits.py" *), Bash(python "*/skills/usage/scripts/claude_limits.py"), Bash(python "*/skills/usage/scripts/claude_limits.py" *), Bash(py "*/skills/usage/scripts/claude_limits.py"), Bash(py "*/skills/usage/scripts/claude_limits.py" *), Bash(node --version), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
 ---
 
 # Claude limits
