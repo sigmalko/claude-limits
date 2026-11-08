@@ -1,42 +1,45 @@
 ---
 name: setup
-description: First-time setup for the usage skill. Creates ~/.claude/claude-limits.tokens from a template with owner-only permissions and walks the user through getting a token per account with `claude setup-token`, without ever seeing the tokens.
+description: First-time setup for the usage skill. Creates the tokens file (~/.claude/claude-limits.tokens) with owner-only permissions (via the scripts' `--init`) and walks the user through getting a token per account with `claude setup-token`, without ever seeing the tokens.
 disable-model-invocation: true
-allowed-tools: Bash(test *), Bash(mkdir *), Bash(cp *), Bash(chmod *), Bash(icacls *), Bash(node *claude-limits.mjs*), Bash(node --version), Bash(python3 *claude_limits.py*), Bash(python *claude_limits.py*), Bash(py *claude_limits.py*), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
+allowed-tools: Bash(node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --init), Bash(node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --brief), Bash(python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init), Bash(python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief), Bash(python "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init), Bash(python "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief), Bash(py -3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init), Bash(py -3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief), Bash(node --version), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
 ---
 
 # Set up claude-limits
 
-Prepare the tokens file used by `/subscription-limits:usage`. You only create the file from the template and check the
+Prepare the tokens file used by `/subscription-limits:usage`. You only create the file with `--init` and check the
 result. **You never see, read, print or ask for a token.**
 
 ## Steps
 
-1. Pick a runtime: `node --version` (needs v18+), otherwise `python3 --version` / `python --version` / `py -3 --version`
-   (needs Python 3.9+). If none works, tell the user to install Node.js 18+ or Python 3.9+ and stop.
+1. Pick a runtime. The tool exists in two identical versions, so use whichever the machine has:
+   1. Run `node --version`. If it prints v18 or newer, use Node (script `claude-limits.mjs`).
+   2. Otherwise try Python 3.9+: `python3 --version` (Linux/macOS), then `python --version`, then `py -3 --version`
+      (Windows launcher). Use the first one that prints Python 3.9 or newer (script `claude_limits.py`).
+   3. If none works, tell the user to install Node.js 18+ or Python 3.9+ and stop.
 
-2. Check whether the file already exists, without reading it: `test -e ~/.claude/claude-limits.tokens && echo exists`.
-   - If it exists, do **not** overwrite it. Skip to step 5 to verify it.
+2. Create the tokens file with `--init`. It works the same on Linux, macOS and Windows: it creates the parent
+   directory, copies the template, restricts the file to the current user, and **never overwrites an existing file**
+   (it then says "already exists" and does not read it). Run it exactly as written, as one plain command with the quoted
+   script path (no `cd`, pipes or redirections; the pre-approved permission patterns match only this exact form, anything
+   else just triggers a normal permission prompt):
 
-3. Create it from the template with owner-only permissions:
-
-   ```bash
-   mkdir -p ~/.claude
-   cp "${CLAUDE_SKILL_DIR}/claude-limits.tokens.example" ~/.claude/claude-limits.tokens
-   chmod 600 ~/.claude/claude-limits.tokens
+   ```
+   node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --init
+   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --init   # if Node is not available
    ```
 
-   On Windows `chmod` does nothing, so also restrict the file to the current user:
+   For Python, replace `python3` with `python` or `py -3` as detected; nothing else changes.
 
-   ```powershell
-   icacls "$HOME\.claude\claude-limits.tokens" /inheritance:r /grant:r "${env:USERNAME}:(R,W)"
-   ```
+   It prints the path of the file. If it fails, show the user the error and stop.
+
+3. If the file already existed, skip step 4 unless the user wants to add accounts, and go to step 5.
 
 4. Tell the user, in their language, to do the token part themselves (you cannot, and must not see tokens):
    1. For **each** Claude subscription account, log in to that account and run `claude setup-token` **in a separate
       terminal** (not in this chat; the output would end up in the conversation).
    2. Copy the printed `sk-ant-oat01-...` token.
-   3. Open `~/.claude/claude-limits.tokens` in an editor, replace one `REPLACE_ME` line per account, **name the
+   3. Open the file printed by `--init` in an editor, replace one `REPLACE_ME` line per account, **name the
       account on the left of `=`** (`work=sk-ant-oat01-...`), and delete the example lines that are not used.
    4. Never paste a token into this chat. If the user does, tell them it is now exposed and should be replaced with a
       new `claude setup-token`.
@@ -48,7 +51,7 @@ result. **You never see, read, print or ask for a token.**
 
    ```
    node "${CLAUDE_SKILL_DIR}/../usage/scripts/claude-limits.mjs" --brief
-   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief   # if Node is not available
+   python3 "${CLAUDE_SKILL_DIR}/../usage/scripts/claude_limits.py" --brief   # if Node is not available (same runtime rule)
    ```
 
    - `[ OK ]` lines: setup works. Point the user to `/subscription-limits:usage`.

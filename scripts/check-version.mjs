@@ -21,9 +21,8 @@ for (const p of market.plugins ?? []) {
 }
 
 const changelog = read('CHANGELOG.md');
-const BS = String.fromCharCode(92);
-const esc = String(version).replace(/[.+]/g, (c) => BS + c);
-const heading = new RegExp("^## " + BS + "[" + esc + BS + "] - " + BS + "d{4}-" + BS + "d{2}-" + BS + "d{2}" + BS + "s*$", "m");
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const heading = new RegExp(String.raw`^## \[${escapeRegExp(String(version))}\] - \d{4}-\d{2}-\d{2}\s*$`, 'm');
 if (!heading.test(changelog)) {
   errors.push(`CHANGELOG.md: no "## [${version}] - YYYY-MM-DD" section`);
 }

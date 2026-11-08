@@ -3,7 +3,7 @@ name: usage
 description: Show usage of the Claude subscription limits (5-hour and weekly window) and their reset times for the current account and every account in ~/.claude/claude-limits.tokens.
 disable-model-invocation: true
 argument-hint: "[account ...] [--brief] [--json]"
-allowed-tools: Bash(node *claude-limits.mjs*), Bash(node --version), Bash(python3 *claude_limits.py*), Bash(python *claude_limits.py*), Bash(py *claude_limits.py*), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
+allowed-tools: Bash(node "${CLAUDE_SKILL_DIR}/scripts/claude-limits.mjs"), Bash(node "${CLAUDE_SKILL_DIR}/scripts/claude-limits.mjs" *), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py"), Bash(python3 "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py" *), Bash(python "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py"), Bash(python "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py" *), Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py"), Bash(py -3 "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py" *), Bash(node --version), Bash(python3 --version), Bash(python --version), Bash(py -3 --version)
 ---
 
 # Claude limits
@@ -21,7 +21,10 @@ fraction of a limit. Run it only when the user asked for it.
    3. If neither is available, tell the user to install Node.js 18+ or Python 3.9+
       (`winget install OpenJS.NodeJS.LTS` or `winget install Python.Python.3.12` on Windows, `brew install node` on
       macOS, the distro package or nvm on Linux) and stop.
-2. Run the script. Pass the user's arguments through (account names, `--brief`, `--json`); with no arguments use `--brief`:
+2. Run the script. Pass the user's arguments through (account names, `--brief`, `--json`); with no arguments use `--brief`.
+   Run it exactly as written below, as one plain command: the runtime, then the quoted script path, then the arguments.
+   Do not change the path, add `cd`, pipes, redirections or other options (the pre-approved permission patterns match only
+   this exact form; anything else just triggers a normal permission prompt):
 
    a. Node:
 
@@ -29,7 +32,7 @@ fraction of a limit. Run it only when the user asked for it.
    node "${CLAUDE_SKILL_DIR}/scripts/claude-limits.mjs" $ARGUMENTS
    ```
 
-   b. Python (replace `python3` with `python` or `py -3` as detected):
+   b. Python (replace `python3` with `python` or `py -3` as detected; nothing else changes):
 
    ```
    python3 "${CLAUDE_SKILL_DIR}/scripts/claude_limits.py" $ARGUMENTS
