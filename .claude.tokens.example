@@ -1,0 +1,9 @@
+# Template for the tokens file (committed). Locally, copy it to .claude.tokens (gitignored):
+#   Linux/macOS/Git Bash:  cp .claude.tokens.example .claude.tokens
+#   PowerShell:            Copy-Item .claude.tokens.example .claude.tokens
+# One account per line: name=token. You choose the name (left side); the script uses it in the output
+# and as an argument: node bin/claude-limits.mjs work_a
+# Generate tokens with: claude setup-token
+work_a=sk-ant-oat01-REPLACE_ME
+work_b=sk-ant-oat01-REPLACE_ME
+work_c=sk-ant-oat01-REPLACE_ME
