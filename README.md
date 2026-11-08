@@ -21,6 +21,51 @@ Inside Claude Code:
 
 Update later with `/plugin marketplace update sigmalko-plugins` and `/plugin update subscription-limits@sigmalko-plugins`.
 
+### Install scope: user, project or local
+
+`sigmalko/claude-limits` is the GitHub repo the marketplace is fetched from; it is not the repo of the project you are
+working in. Where the plugin is **enabled** depends on the scope:
+
+| Scope | Stored in | Who gets it |
+| --- | --- | --- |
+| `user` (default) | `~/.claude/settings.json` | only you, in every project |
+| `project` | `.claude/settings.json` of the current project (commit it) | everyone who uses that repo |
+| `local` | `.claude/settings.local.json` of the current project (gitignored) | only you, only in that project |
+
+In every case the plugin files are cached once per machine in `~/.claude/plugins/cache/`; the scope only decides where
+it is switched on.
+
+**Use `user` scope. It is the one that makes the most sense here**, because everything this plugin works with is
+personal and lives in your home directory, not in a project:
+
+- the tokens file `~/.claude/claude-limits.tokens` (your `claude setup-token` tokens, i.e. secrets),
+- the `current` account from `~/.claude/.credentials.json`,
+- the accounts you want to compare, which have nothing to do with any single repo.
+
+A `user`-scope install sits next to the tokens, works in every project, and puts nothing in a project's `.claude/`
+that could be committed by accident. `project` scope would share the skill with a team, but the tokens would not come
+with it (each person still needs their own tokens file), so it adds little. `local` is only useful to try the plugin
+in a single project without touching your global settings.
+
+From the terminal (for `project` and `local`, run it in the project directory):
+
+```bash
+# user (default, recommended): personal, all projects
+claude plugin marketplace add sigmalko/claude-limits
+claude plugin install subscription-limits@sigmalko-plugins
+
+# project: shared with the team through the repo's .claude/settings.json
+claude plugin marketplace add sigmalko/claude-limits --scope project
+claude plugin install subscription-limits@sigmalko-plugins --scope project
+
+# local: only you, only this project, not committed
+claude plugin marketplace add sigmalko/claude-limits --scope local
+claude plugin install subscription-limits@sigmalko-plugins --scope local
+```
+
+Check what is installed with `claude plugin list`; remove it with
+`claude plugin uninstall subscription-limits@sigmalko-plugins [--scope ...]`.
+
 Then set up the tokens (next sections) and run:
 
 ```
