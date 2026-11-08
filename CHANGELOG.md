@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-08
+
+### Added
+- Python 3.9+ version of the tool, `skills/usage/scripts/claude_limits.py` (standard library only, same flags, output and
+  exit codes as the Node.js version), for machines without Node.js.
+
+### Changed
+- The `usage` and `setup` skills detect the runtime: Node.js 18+ if present, otherwise Python 3.9+ (`python3`, `python`
+  or `py -3`), on Windows and Linux. Docs describe both runtimes and how to install Python.
+
 ## [1.0.0] - 2026-11-08
 
 First release as a Claude Code plugin.
@@ -31,5 +41,6 @@ First release as a Claude Code plugin.
 - Single-file Node.js tool reading `anthropic-ratelimit-unified-*` headers for many accounts, with `--brief`, `--json`,
   exit codes and Docker usage.
 
-[Unreleased]: https://github.com/sigmalko/claude-limits/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/sigmalko/claude-limits/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/sigmalko/claude-limits/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/sigmalko/claude-limits/releases/tag/v1.0.0

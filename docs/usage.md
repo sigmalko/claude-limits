@@ -13,7 +13,9 @@ account. Claude is told never to read or print the tokens file.
 
 ## Run it by hand
 
-The script is a normal Node program, so you can run it without Claude (terminal, cron, CI).
+The tool is a normal Node or Python program, so you can run it without Claude (terminal, cron, CI). The two versions
+are interchangeable: same flags, output and exit codes. Examples below use Node; for Python replace
+`node .../claude-limits.mjs` with `python3 .../claude_limits.py` (`py -3` or `python` on Windows).
 
 **Installed as a plugin** (the path contains the version, so the command looks the script up):
 
@@ -37,7 +39,11 @@ node skills/usage/scripts/claude-limits.mjs --json          # machine-readable (
 node skills/usage/scripts/claude-limits.mjs --help
 ```
 
-The command is the same in Bash and PowerShell.
+The command is the same in Bash and PowerShell. The Python equivalent:
+
+```bash
+python3 skills/usage/scripts/claude_limits.py --brief       # Windows: py -3 skills/usage/scripts/claude_limits.py --brief
+```
 
 ## Output
 

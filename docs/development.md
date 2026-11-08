@@ -7,7 +7,8 @@
 .claude-plugin/marketplace.json             makes the repo an installable marketplace (sigmalko-plugins)
 .claude-plugin/icon.png                     plugin icon (512x512)
 skills/usage/SKILL.md                       the /subscription-limits:usage skill
-skills/usage/scripts/claude-limits.mjs      the actual tool (also runnable by hand)
+skills/usage/scripts/claude-limits.mjs      the actual tool, Node.js version (also runnable by hand)
+skills/usage/scripts/claude_limits.py       the same tool, Python version (keep both in sync: flags, output, exit codes)
 skills/setup/SKILL.md                       the /subscription-limits:setup skill
 skills/setup/claude-limits.tokens.example   template of the tokens file
 scripts/check-version.mjs                   checks that plugin.json, marketplace.json and CHANGELOG.md agree

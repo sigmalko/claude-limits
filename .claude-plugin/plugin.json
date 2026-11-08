@@ -1,7 +1,7 @@
 {
   "name": "subscription-limits",
   "description": "Shows how much of the Claude Code subscription limits (5-hour and weekly window) each of your accounts has used, and when they reset",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "sigmalko"
   },

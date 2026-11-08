@@ -4,7 +4,9 @@ Shows how much of the Claude Code **subscription limits** each of your accounts 
 weekly window, plus when each one resets. It works for many accounts at once.
 
 It is a **Claude Code plugin** (`subscription-limits`) and its own single-plugin marketplace. The core is one file with
-no dependencies, `skills/usage/scripts/claude-limits.mjs` (Node.js 18+, built-ins only), which you can also run by hand.
+no dependencies, in two identical versions: `skills/usage/scripts/claude-limits.mjs` (Node.js 18+) and
+`skills/usage/scripts/claude_limits.py` (Python 3.9+). The skills use whichever runtime you have, on Windows, Linux and
+macOS; you can also run either by hand.
 
 ## Quick start
 
