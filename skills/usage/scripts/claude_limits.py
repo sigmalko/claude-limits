@@ -3,16 +3,28 @@
 
 Same flags, output and exit codes as claude-limits.mjs. Standard library only, Python 3.9+, Windows/Linux/macOS.
 
-  claude_limits.py [name ...] [--brief] [--json]
+Usage: claude_limits.py [name ...] [--brief] [--json] [-h | --help]
 
-Tokens file: ~/.claude/claude-limits.tokens or CLAUDE_LIMITS_TOKENS_FILE (name=token per line, '#' comments).
-Environment: CLAUDE_PROBE_MODEL (default claude-haiku-5-5), CLAUDE_LIMITS_TZ (default $TZ or Europe/Warsaw),
-CLAUDE_LIMITS_TOKENS_FILE.
-Exit code: 0 = every account answered and is allowed, 1 = token/network error or a limit reached, 2 = bad argument.
+  name ...    accounts to check; without a name: "current" plus every account in the tokens file
+  --brief     one line per account
+  --json      machine-readable output (an array, one object per account)
+  -h, --help  show this help
+
+Accounts:
+  current   the account Claude Code on this machine is logged in with: $CLAUDE_CONFIG_DIR/.credentials.json
+            (default ~/.claude/.credentials.json; on macOS the Keychain item "Claude Code-credentials" as fallback)
+  <name>    an entry of the tokens file (name=token per line, token from 'claude setup-token'):
+            ~/.claude/claude-limits.tokens or CLAUDE_LIMITS_TOKENS_FILE. Tokens containing REPLACE_ME are skipped.
+
+Environment: CLAUDE_PROBE_MODEL (default claude-haiku-5-5), CLAUDE_LIMITS_TZ (default $TZ, else the system time zone,
+else the local UTC offset), CLAUDE_LIMITS_TOKENS_FILE, CLAUDE_CONFIG_DIR.
+Exit code: 0 = every account answered and is allowed (also with a warning), 1 = token/network error or a limit reached,
+2 = bad argument.
 """
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -20,8 +32,31 @@ import urllib.request
 from datetime import datetime, timezone
 
 MODEL = os.environ.get("CLAUDE_PROBE_MODEL") or "claude-haiku-5-5"
-TZ = os.environ.get("CLAUDE_LIMITS_TZ") or os.environ.get("TZ") or "Europe/Warsaw"
+PLACEHOLDER = "REPLACE_ME"
 HOME = os.path.expanduser("~")
+CONFIG_DIR = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(HOME, ".claude")
+
+
+def system_tz():
+    """IANA name of the system zone if it can be found without third-party modules, else None."""
+    try:
+        target = os.path.realpath("/etc/localtime")
+        if "zoneinfo/" in target:
+            return target.split("zoneinfo/", 1)[1]
+    except OSError:
+        pass
+    try:
+        with open("/etc/timezone", "r", encoding="utf-8") as f:
+            name = f.read().strip()
+            if name:
+                return name
+    except OSError:
+        pass
+    return None
+
+
+# Explicit zone (CLAUDE_LIMITS_TZ, $TZ) or the system zone; None = print the local UTC offset instead of a name.
+TZ = os.environ.get("CLAUDE_LIMITS_TZ") or os.environ.get("TZ") or system_tz()
 TOKENS_FILE = os.environ.get("CLAUDE_LIMITS_TOKENS_FILE") or os.path.join(HOME, ".claude", "claude-limits.tokens")
 
 
@@ -66,9 +101,20 @@ def credentials(account, from_file):
     """Returns a dict with token / error, or None when the account has no credentials at all."""
     if account != "current":
         token = from_file.get(account)
-        return {"token": token, "source": os.path.basename(TOKENS_FILE)} if token else None
-    source = os.path.join(HOME, ".claude", ".credentials.json")
+        if not token:
+            return None
+        if PLACEHOLDER in token:
+            return {"placeholder": True}
+        return {"token": token, "source": os.path.basename(TOKENS_FILE)}
+    source = os.path.join(CONFIG_DIR, ".credentials.json")
     raw = read_file(source).strip()
+    if not raw and sys.platform == "darwin":
+        try:  # the output is only parsed, never printed
+            raw = subprocess.run(["security", "find-generic-password", "-s", "Claude Code-credentials", "-w"],
+                                 capture_output=True, text=True, timeout=10, check=True).stdout.strip()
+            source = "macOS Keychain (Claude Code-credentials)"
+        except (OSError, subprocess.SubprocessError):
+            raw = ""
     if not raw:
         return None
     try:
@@ -77,6 +123,10 @@ def credentials(account, from_file):
         if not oauth.get("accessToken"):
             return {"error": "no accessToken in %s" % source, "source": source}
         exp = oauth.get("expiresAt")
+        if exp and exp < time.time() * 1000:
+            when_exp = datetime.fromtimestamp(exp / 1000, timezone.utc).isoformat()
+            return {"error": "the access token in %s expired %s; run `claude` once to refresh it" % (source, when_exp),
+                    "source": source}
         return {"token": oauth["accessToken"], "source": source, "expiresAt": exp,
                 "expired": bool(exp and exp < time.time() * 1000), "subscription": oauth.get("subscriptionType")}
     except (ValueError, AttributeError):
@@ -142,12 +192,15 @@ def dur(sec):
 
 def when(epoch):
     dt = datetime.fromtimestamp(epoch, timezone.utc)
+    label = TZ
     try:
         from zoneinfo import ZoneInfo
         dt = dt.astimezone(ZoneInfo(TZ))
-    except Exception:  # no tzdata (common on Windows) or unknown zone: fall back to the local zone
+    except Exception:  # no zone name, no tzdata (common on Windows) or unknown zone: local zone, shown as UTC offset
         dt = dt.astimezone()
-    return dt.strftime("%Y-%m-%d %H:%M") + " " + TZ
+        off = dt.utcoffset().total_seconds() // 60
+        label = "UTC%s%02d:%02d" % ("-" if off < 0 else "+", abs(off) // 60, abs(off) % 60)
+    return dt.strftime("%Y-%m-%d %H:%M") + " " + label
 
 
 def main(argv):
@@ -170,6 +223,14 @@ def main(argv):
                 problem = 1
                 results.append({"account": account, "ok": False, "error": "no credentials"})
             continue
+        if cred.get("placeholder"):
+            if wanted:
+                problem = 1
+                results.append({"account": account, "ok": False, "error": "not configured (placeholder token)"})
+            else:
+                err('claude-limits: account "%s" skipped: not configured (placeholder token containing %s)'
+                    % (account, PLACEHOLDER))
+            continue
         if cred.get("error"):
             problem = 1
             results.append({"account": account, "ok": False, "error": cred["error"]})
@@ -188,7 +249,7 @@ def main(argv):
         results.append(dict({"account": account, "ok": True, "source": cred["source"],
                              "subscription": cred.get("subscription")}, **r))
     if not results:
-        msg = "no Claude credentials found (~/.claude/.credentials.json or tokens in %s)" % TOKENS_FILE
+        msg = "no Claude credentials found (%s or tokens in %s)" % (os.path.join(CONFIG_DIR, ".credentials.json"), TOKENS_FILE)
         print(json.dumps([{"ok": False, "error": msg}], indent=2) if as_json else "[FAIL] " + msg)
         return 1
     now = int(time.time())

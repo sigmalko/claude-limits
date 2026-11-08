@@ -54,7 +54,10 @@ python3 skills/usage/scripts/claude_limits.py --brief       # Windows: py -3 ski
 ```
 
 Markers: `[ OK ]` allowed, `[WARN]` allowed but close to a limit, `[FAIL]` limit reached or the account could not be
-checked (bad/expired token, no network).
+checked (bad/expired token, placeholder token, no network).
+
+`--help` prints the usage; an unknown flag exits with code 2. Without `CLAUDE_LIMITS_TZ`/`TZ`, reset times use the
+system time zone.
 
 **Exit code:** `0` when every account answered and is allowed (a warning still counts as allowed); `1` on a token or
 network error or when a limit is reached; `2` for an unknown argument. Handy for scripts and cron.

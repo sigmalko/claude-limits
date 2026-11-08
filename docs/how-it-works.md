@@ -11,6 +11,8 @@ costs a negligible fraction of a limit. Tokens are never printed or passed on a 
 
 - The headers are undocumented (Claude Code itself relies on them) and may change or disappear.
 - `HTTP 401` means the token is wrong, revoked or expired: generate a new one with `claude setup-token`.
+- Placeholder tokens (containing `REPLACE_ME`) are never sent; the `current` account with an expired access token is not
+  probed either: run `claude` once to refresh it. Tokens are not refreshed by this tool.
 - The tokens file holds secrets. Don't commit it, don't paste it into chats, and restrict its permissions where you can
   (`chmod 600` on Linux/macOS). See [Configuration](configuration.md#optional-hardening) to also forbid Claude from
   reading it.

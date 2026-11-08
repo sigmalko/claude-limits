@@ -4,7 +4,8 @@
 //
 //   claude-limits [name ...] [--brief] [--json]
 //     (no name)     every account that has credentials:
-//                     current  ~/.claude/.credentials.json (the account Claude Code on this machine is logged in with)
+//                     current  $CLAUDE_CONFIG_DIR/.credentials.json (default ~/.claude; on macOS the Keychain item
+//                              "Claude Code-credentials" is the fallback) = the account Claude Code here is logged in with
 //                     <name>   every entry of the tokens file (see below)
 //     --brief       one line per account
 //     --json        machine-readable (an array, one object per account)
@@ -24,24 +25,47 @@
 // The token is never printed or passed on a command line.
 // Limitations: these headers are undocumented (Claude Code itself uses them) and may change or disappear; API-key accounts
 // (ANTHROPIC_API_KEY) have no subscription windows and are not supported.
-// Environment: CLAUDE_PROBE_MODEL (default claude-haiku-5-5), CLAUDE_LIMITS_TZ (default $TZ or Europe/Warsaw),
-// CLAUDE_LIMITS_TOKENS_FILE.
+// Environment: CLAUDE_PROBE_MODEL (default claude-haiku-5-5), CLAUDE_LIMITS_TZ (default $TZ, else the system time zone),
+// CLAUDE_LIMITS_TOKENS_FILE, CLAUDE_CONFIG_DIR.
 // Exit code: 0 = every account answered and is allowed (also with a warning), 1 = token/network error or a limit reached.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const MODEL = process.env.CLAUDE_PROBE_MODEL || 'claude-haiku-5-5';
-const TZ = process.env.CLAUDE_LIMITS_TZ || process.env.TZ || 'Europe/Warsaw';
+const systemTz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch { return 'UTC'; } };
+const TZ = process.env.CLAUDE_LIMITS_TZ || process.env.TZ || systemTz();
+const CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+const PLACEHOLDER = 'REPLACE_ME';
 const TOKENS_FILE = process.env.CLAUDE_LIMITS_TOKENS_FILE || path.join(os.homedir(), '.claude', 'claude-limits.tokens');
+
+const USAGE = `claude-limits: usage of the Claude subscription limits (5-hour and weekly window) and when they reset.
+
+Usage: claude-limits [name ...] [--brief] [--json] [-h | --help]
+
+  name ...    accounts to check; without a name: "current" plus every account in the tokens file
+  --brief     one line per account
+  --json      machine-readable output (an array, one object per account)
+  -h, --help  show this help
+
+Accounts:
+  current   the account Claude Code on this machine is logged in with: $CLAUDE_CONFIG_DIR/.credentials.json
+            (default ~/.claude/.credentials.json; on macOS the Keychain item "Claude Code-credentials" as fallback)
+  <name>    an entry of the tokens file (name=token per line, token from 'claude setup-token'):
+            ~/.claude/claude-limits.tokens or CLAUDE_LIMITS_TOKENS_FILE. Tokens containing REPLACE_ME are skipped.
+
+Environment: CLAUDE_PROBE_MODEL (default claude-haiku-5-5), CLAUDE_LIMITS_TZ (default $TZ, else the system time zone),
+CLAUDE_LIMITS_TOKENS_FILE, CLAUDE_CONFIG_DIR.
+Exit code: 0 = every account answered and is allowed (also with a warning), 1 = token/network error or a limit reached,
+2 = bad argument.`;
 
 const args = process.argv.slice(2);
 const brief = args.includes('--brief');
 const json = args.includes('--json');
 const wanted = args.filter((a) => !a.startsWith('--'));
 if (args.includes('-h') || args.includes('--help')) {
-  console.log(fs.readFileSync(fileURLToPath(import.meta.url), 'utf8').split('\n').slice(1, 29).map((l) => l.replace(/^\/\/ ?/, '')).join('\n'));
+  console.log(USAGE);
   process.exit(0);
 }
 for (const a of args) if (a.startsWith('--') && !['--brief', '--json'].includes(a)) {
@@ -76,16 +100,25 @@ const fromFile = fileTokens();
 function credentials(account) {
   if (account !== 'current') {
     const token = fromFile.get(account);
-    return token ? { token, source: path.basename(TOKENS_FILE) } : null;
+    if (!token) return null;
+    if (token.includes(PLACEHOLDER)) return { placeholder: true };
+    return { token, source: path.basename(TOKENS_FILE) };
   }
-  const source = path.join(os.homedir(), '.claude', '.credentials.json');
-  const raw = readFile(source).trim();
+  let source = path.join(CONFIG_DIR, '.credentials.json');
+  let raw = readFile(source).trim();
+  if (!raw && process.platform === 'darwin') {
+    try { // the output is only parsed, never printed
+      raw = execFileSync('security', ['find-generic-password', '-s', 'Claude Code-credentials', '-w'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 10000 }).trim();
+      source = 'macOS Keychain (Claude Code-credentials)';
+    } catch { raw = ''; }
+  }
   if (!raw) return null;
   try {
     const j = JSON.parse(raw);
     const oauth = j.claudeAiOauth ?? j;
     if (!oauth.accessToken) return { error: `no accessToken in ${source}`, source };
     const expired = oauth.expiresAt && oauth.expiresAt < Date.now();
+    if (expired) return { error: `the access token in ${source} expired ${new Date(oauth.expiresAt).toISOString()}; run \`claude\` once to refresh it`, source };
     return { token: oauth.accessToken, source, expiresAt: oauth.expiresAt, expired, subscription: oauth.subscriptionType };
   } catch {
     return { error: `${source} is not valid JSON`, source };
@@ -148,6 +181,11 @@ for (const account of accounts) {
     if (wanted.length) { problem = 1; results.push({ account, ok: false, error: 'no credentials' }); }
     continue; // not configured and not asked for explicitly: skip silently
   }
+  if (cred.placeholder) {
+    if (wanted.length) { problem = 1; results.push({ account, ok: false, error: 'not configured (placeholder token)' }); }
+    else console.error(`claude-limits: account "${account}" skipped: not configured (placeholder token containing ${PLACEHOLDER})`);
+    continue;
+  }
   if (cred.error) { problem = 1; results.push({ account, ok: false, error: cred.error }); continue; }
   const r = await probe(cred.token);
   if (r.error) {
@@ -160,7 +198,7 @@ for (const account of accounts) {
 }
 
 if (!results.length) {
-  const msg = `no Claude credentials found (~/.claude/.credentials.json or tokens in ${TOKENS_FILE})`;
+  const msg = `no Claude credentials found (${path.join(CONFIG_DIR, '.credentials.json')} or tokens in ${TOKENS_FILE})`;
   if (json) console.log(JSON.stringify([{ ok: false, error: msg }], null, 2)); else console.log(`[FAIL] ${msg}`);
   process.exitCode = 1;
 } else {
