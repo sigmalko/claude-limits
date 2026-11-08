@@ -60,13 +60,16 @@ Details:
 - A duplicated name prints a warning and the last line wins.
 - The name `current` is reserved (see below); a line using it is skipped with a message.
 - Tolerated: UTF-8 BOM, Windows line endings (CRLF), an `export ` prefix and quotes around the token.
-- Delete the template lines you do not use: a `REPLACE_ME` token just fails with `HTTP 401`.
+- Delete the template lines you do not use: a token containing `REPLACE_ME` is skipped without a network call (a warning on stderr when all accounts are checked;
+  `[FAIL] name: not configured (placeholder token)` and exit code 1 when you ask for that account by name).
 
 ## The `current` account
 
-The account that Claude Code is currently logged in with on this machine (`~/.claude/.credentials.json`) is checked
-automatically as `current`, if that file exists. You don't have to configure it. On macOS the credentials usually live
-in the Keychain, so `current` may be missing there; add that account to the tokens file instead. If you also put the
+The account that Claude Code is currently logged in with on this machine (`$CLAUDE_CONFIG_DIR/.credentials.json`,
+default `~/.claude/.credentials.json`) is checked automatically as `current`, if that file exists. You don't have to
+configure it. On macOS, where the credentials usually live in the Keychain, the script falls back to the Keychain item
+`Claude Code-credentials` (read with `security find-generic-password`, parsed and never printed). If the access token
+has expired, `current` reports that you should run `claude` once to refresh it; the script never refreshes tokens itself. If you also put the
 same account in the tokens file it shows up twice, with identical numbers.
 
 ## Environment variables
@@ -74,7 +77,8 @@ same account in the tokens file it shows up twice, with identical numbers.
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `CLAUDE_LIMITS_TOKENS_FILE` | `~/.claude/claude-limits.tokens` | Path to the tokens file |
-| `CLAUDE_LIMITS_TZ` | `$TZ`, else `Europe/Warsaw` | Time zone used to print reset times |
+| `CLAUDE_LIMITS_TZ` | `$TZ`, else the system time zone (Python without a zone name: the local UTC offset, e.g. `UTC+02:00`) | Time zone used to print reset times |
+| `CLAUDE_CONFIG_DIR` | `~/.claude` | Where `current` finds `.credentials.json` (same variable Claude Code uses) |
 | `CLAUDE_PROBE_MODEL` | `claude-haiku-5-5` | Model used for the probe request |
 
 ## Optional hardening
