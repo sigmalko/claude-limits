@@ -4,10 +4,12 @@
 Same flags, output and exit codes as claude-limits.mjs. Standard library only, Python 3.9+, Windows/Linux/macOS.
 
 Usage: claude_limits.py [name ...] [--brief] [--json] [-h | --help]
+       claude_limits.py --init
 
   name ...    accounts to check; without a name: "current" plus every account in the tokens file
   --brief     one line per account
   --json      machine-readable output (an array, one object per account)
+  --init      create the tokens file from the template (owner-only permissions); never overwrites; no network
   -h, --help  show this help
 
 Accounts:
@@ -203,14 +205,52 @@ def when(epoch):
     return dt.strftime("%Y-%m-%d %H:%M") + " " + label
 
 
+def init_tokens_file():
+    """--init: create the tokens file from the template with owner-only permissions. Never overwrites or reads an existing file."""
+    template = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "setup", "claude-limits.tokens.example")
+    try:
+        with open(template, "rb") as f:
+            data = f.read()
+    except OSError:
+        err("claude-limits: template not found: " + os.path.normpath(template))
+        return 1
+    try:
+        os.makedirs(os.path.dirname(TOKENS_FILE) or ".", exist_ok=True)
+        fd = os.open(TOKENS_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o600)
+    except FileExistsError:
+        print("Tokens file already exists, left untouched: " + TOKENS_FILE)
+        return 0
+    except OSError as e:
+        err("claude-limits: cannot create %s (%s)" % (TOKENS_FILE, e.strerror or e))
+        return 1
+    with os.fdopen(fd, "wb") as f:
+        f.write(data)
+    try:
+        if os.name == "nt":
+            user = os.environ.get("USERNAME") or os.getlogin()
+            subprocess.run(["icacls", TOKENS_FILE, "/inheritance:r", "/grant:r", user + ":(R,W)"],
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        else:
+            os.chmod(TOKENS_FILE, 0o600)
+    except (OSError, subprocess.SubprocessError) as e:
+        err("claude-limits: created %s but could not restrict its permissions (%s); restrict it to your user manually" % (TOKENS_FILE, e))
+        return 1
+    print("Created %s (owner-only permissions)." % TOKENS_FILE)
+    print("Next: run `claude setup-token` per account in a separate terminal, put each token in that file as "
+          "name=sk-ant-oat01-... (remove the REPLACE_ME example lines), then run this script with --brief.")
+    return 0
+
+
 def main(argv):
     if "-h" in argv or "--help" in argv:
         print(__doc__.strip())
         return 0
     for a in argv:
-        if a.startswith("--") and a not in ("--brief", "--json"):
+        if a.startswith("--") and a not in ("--brief", "--json", "--init"):
             err("claude-limits: unknown argument " + a)
             return 2
+    if "--init" in argv:
+        return init_tokens_file()
     brief, as_json = "--brief" in argv, "--json" in argv
     wanted = [a for a in argv if not a.startswith("--")]
     from_file = file_tokens()

@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-08
+
+### Added
+- `--init` flag in both scripts: creates the tokens file from the template with owner-only permissions on Windows,
+  Linux and macOS, never overwriting an existing file (#2).
+- `current` account honours `CLAUDE_CONFIG_DIR` and falls back to the macOS Keychain; an expired access token now gives a
+  clear "run `claude` once to refresh" message (#5).
+
+### Changed
+- The `setup` skill uses `--init` instead of `test`/`mkdir`/`cp`/`chmod`/`icacls`, so it works the same on every platform (#2).
+- Tighter `allowed-tools` patterns in both skills (#8).
+- The default time zone is the system zone instead of Europe/Warsaw (#3).
+- `--help` prints an explicit usage text instead of a slice of the source (#7).
+
+### Fixed
+- Placeholder `REPLACE_ME` tokens are no longer sent to the API (#4).
+
+### Development
+- `scripts/check-version.mjs` uses a readable regex (#10).
+
 ## [1.1.0] - 2026-11-08
 
 ### Added
@@ -41,6 +61,7 @@ First release as a Claude Code plugin.
 - Single-file Node.js tool reading `anthropic-ratelimit-unified-*` headers for many accounts, with `--brief`, `--json`,
   exit codes and Docker usage.
 
-[Unreleased]: https://github.com/sigmalko/claude-limits/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/sigmalko/claude-limits/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/sigmalko/claude-limits/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sigmalko/claude-limits/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/sigmalko/claude-limits/releases/tag/v1.0.0
