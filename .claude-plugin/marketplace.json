@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "sigmalko-plugins",
+  "description": "Single-plugin marketplace for subscription-limits",
+  "owner": {
+    "name": "sigmalko"
+  },
+  "plugins": [
+    {
+      "name": "subscription-limits",
+      "description": "Shows how much of the Claude Code subscription limits (5-hour and weekly window) each of your accounts has used, and when they reset",
+      "source": "./"
+    }
+  ]
+}

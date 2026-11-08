@@ -9,9 +9,9 @@
 //     --brief       one line per account
 //     --json        machine-readable (an array, one object per account)
 //
-// Tokens file: .claude.tokens in the repo root (gitignored), or the path in CLAUDE_LIMITS_TOKENS_FILE.
+// Tokens file: ~/.claude/claude-limits.tokens (outside the plugin, survives updates), or CLAUDE_LIMITS_TOKENS_FILE.
 // One account per line, name=token (a token made by `claude setup-token`; you choose the names), like a .env file.
-// Copy .claude.tokens.example to .claude.tokens (gitignored) and fill it in:
+// Copy claude-limits.tokens.example to ~/.claude/claude-limits.tokens and fill it in:
 //     work_a=sk-ant-oat01-...
 //     work_b=sk-ant-oat01-...
 //     sk-ant-oat01-...            (unnamed -> account-N, N = line order among entries)
@@ -34,8 +34,7 @@ import { fileURLToPath } from 'node:url';
 
 const MODEL = process.env.CLAUDE_PROBE_MODEL || 'claude-haiku-5-5';
 const TZ = process.env.CLAUDE_LIMITS_TZ || process.env.TZ || 'Europe/Warsaw';
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const TOKENS_FILE = process.env.CLAUDE_LIMITS_TOKENS_FILE || path.join(HERE, '..', '.claude.tokens');
+const TOKENS_FILE = process.env.CLAUDE_LIMITS_TOKENS_FILE || path.join(os.homedir(), '.claude', 'claude-limits.tokens');
 
 const args = process.argv.slice(2);
 const brief = args.includes('--brief');

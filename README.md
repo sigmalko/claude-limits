@@ -3,7 +3,40 @@
 Shows how much of the Claude Code **subscription limits** each of your accounts has used: the 5-hour window and the
 weekly window, plus when each one resets. It works for many accounts at once.
 
-Single file, no dependencies: `bin/claude-limits.mjs` (Node.js built-ins only).
+The repo is a **Claude Code plugin** (`subscription-limits`) and, at the same time, its own single-plugin marketplace.
+The core is one file with no dependencies, `bin/claude-limits.mjs` (Node.js built-ins only), which you can also run
+directly as a plain CLI.
+
+> The plugin is called `subscription-limits`, not `claude-limits`: plugin names starting with `claude-` are reserved
+> for Anthropic. The repo, the script and the tokens file keep the `claude-limits` name.
+
+## Install as a plugin
+
+Inside Claude Code:
+
+```
+/plugin marketplace add sigmalko/claude-limits
+/plugin install subscription-limits@sigmalko-plugins
+```
+
+Update later with `/plugin marketplace update sigmalko-plugins` and `/plugin update subscription-limits@sigmalko-plugins`.
+
+Then set up the tokens (next sections) and run:
+
+```
+/subscription-limits:usage                  # all accounts, brief
+/subscription-limits:usage work_a --json    # arguments are passed to the script
+```
+
+The skill only runs when you invoke it (`disable-model-invocation`): every check sends one tiny request per account.
+Claude is told never to read or print the tokens file.
+
+**Try it from a local clone, without installing:**
+
+```bash
+git clone https://github.com/sigmalko/claude-limits && cd claude-limits
+claude --plugin-dir .
+```
 
 ## Prerequisites
 
@@ -66,21 +99,25 @@ Copy the printed token (`sk-ant-oat01-...`). Treat it like a password.
 
 ## Configure
 
-The script reads the tokens from a `.env`-style file, `.claude.tokens`, in the repo root. The file is gitignored; the
-committed `.claude.tokens.example` is the template.
+The script reads the tokens from a `.env`-style file, **`~/.claude/claude-limits.tokens`**. It lives in your home
+directory, outside the plugin and outside any repo, so plugin updates never overwrite it and it can't be committed by
+accident. `claude-limits.tokens.example` in this repo is the template.
 
 ```bash
 # Linux / macOS / Git Bash
-cp .claude.tokens.example .claude.tokens
+cp claude-limits.tokens.example ~/.claude/claude-limits.tokens
+chmod 600 ~/.claude/claude-limits.tokens
 ```
 
 ```powershell
 # PowerShell
-Copy-Item .claude.tokens.example .claude.tokens
+Copy-Item claude-limits.tokens.example "$HOME\.claude\claude-limits.tokens"
 ```
 
-Then edit `.claude.tokens`: one account per line, `name=token`. **You choose the names** (the left side); the script
-uses them in the output and as arguments.
+(With the plugin installed there is no clone to copy from: just create the file by hand with the format below.)
+
+Then edit it: one account per line, `name=token`. **You choose the names** (the left side); the script uses them in the
+output and as arguments.
 
 ```
 # comments and empty lines are ignored
@@ -98,14 +135,21 @@ Details:
 - To keep the file somewhere else, set `CLAUDE_LIMITS_TOKENS_FILE=/path/to/file`.
 
 The account that Claude Code is currently logged in with on this machine (`~/.claude/.credentials.json`) is checked
-automatically as `current`, if that file exists. You don't have to configure it.
+automatically as `current`, if that file exists. You don't have to configure it. On macOS the credentials usually live
+in the Keychain, so `current` may be missing there; add that account to the tokens file instead.
 
-## Run
+Optional hardening: forbid Claude from reading the secrets at all, in `~/.claude/settings.json`:
 
-From the repo root:
+```json
+{ "permissions": { "deny": ["Read(~/.claude/claude-limits.tokens)", "Read(~/.claude/.credentials.json)"] } }
+```
+
+## Run as a plain CLI
+
+Without the plugin, from a clone of the repo:
 
 ```bash
-node bin/claude-limits.mjs                 # all accounts: current + everything in .claude.tokens
+node bin/claude-limits.mjs                 # all accounts: current + everything in the tokens file
 node bin/claude-limits.mjs work_a work_b   # only the named accounts
 node bin/claude-limits.mjs --brief         # one line per account
 node bin/claude-limits.mjs --json          # machine-readable (an array, one object per account)
@@ -117,7 +161,7 @@ The command is the same in Bash and PowerShell.
 Example output:
 
 ```
-[ OK ] Account work_a (.claude.tokens; status: allowed; binding window: five_hour)
+[ OK ] Account work_a (claude-limits.tokens; status: allowed; binding window: five_hour)
    5 hours :  29% used,  71% left, reset 2026-11-08 21:00 Europe/Warsaw (in 23 min)
    week    :   3% used,  97% left, reset 2026-11-15 15:00 Europe/Warsaw (in 6 d 19 h)
 ```
@@ -130,33 +174,42 @@ network error or when a limit is reached; `2` for an unknown argument. Handy for
 
 ### Docker
 
-Mount the repo (read-only is fine) and run it with any Node 18+ image:
+Mount the repo (read-only is fine) and the tokens file, and run it with any Node 18+ image:
 
 ```bash
 # Linux / macOS / Git Bash (on Git Bash prefix with MSYS_NO_PATHCONV=1)
-docker run --rm -v "$PWD:/app:ro" -w /app node:24-alpine node bin/claude-limits.mjs --brief
+docker run --rm -v "$PWD/bin:/app/bin:ro" -v "$HOME/.claude/claude-limits.tokens:/run/tokens:ro" \
+  -e CLAUDE_LIMITS_TOKENS_FILE=/run/tokens -w /app node:24-alpine node bin/claude-limits.mjs --brief
 ```
 
 ```powershell
 # PowerShell
-docker run --rm -v "${PWD}:/app:ro" -w /app node:24-alpine node bin/claude-limits.mjs --brief
+docker run --rm -v "${PWD}/bin:/app/bin:ro" -v "$HOME\.claude\claude-limits.tokens:/run/tokens:ro" `
+  -e CLAUDE_LIMITS_TOKENS_FILE=/run/tokens -w /app node:24-alpine node bin/claude-limits.mjs --brief
 ```
 
-Inside a container there is no `~/.claude/.credentials.json`, so `current` is skipped and only the accounts from
-`.claude.tokens` are checked. To keep the tokens file outside the mounted repo, mount it and point to it:
-
-```bash
-docker run --rm -v "$PWD/bin:/app/bin:ro" -v "/secure/.claude.tokens:/run/tokens:ro" \
-  -e CLAUDE_LIMITS_TOKENS_FILE=/run/tokens -w /app node:24-alpine node bin/claude-limits.mjs
-```
+Inside a container there is no `~/.claude/.credentials.json`, so `current` is skipped and only the accounts from the
+tokens file are checked.
 
 ## Environment variables
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `CLAUDE_LIMITS_TOKENS_FILE` | `<repo>/.claude.tokens` | Path to the tokens file |
+| `CLAUDE_LIMITS_TOKENS_FILE` | `~/.claude/claude-limits.tokens` | Path to the tokens file |
 | `CLAUDE_LIMITS_TZ` | `$TZ`, else `Europe/Warsaw` | Time zone used to print reset times |
 | `CLAUDE_PROBE_MODEL` | `claude-haiku-5-5` | Model used for the probe request |
+
+## Repo layout
+
+```
+.claude-plugin/plugin.json       plugin manifest (name: subscription-limits)
+.claude-plugin/marketplace.json  makes the repo an installable marketplace (sigmalko-plugins)
+skills/usage/SKILL.md            the /subscription-limits:usage skill
+bin/claude-limits.mjs            the actual tool (also usable standalone)
+claude-limits.tokens.example     template of the tokens file
+```
+
+When you change the plugin, bump `version` in `.claude-plugin/plugin.json`, otherwise installed copies may not update.
 
 ## How it works
 
@@ -169,5 +222,7 @@ costs a negligible fraction of a limit. Tokens are never printed or passed on a 
 
 - The headers are undocumented (Claude Code itself relies on them) and may change or disappear.
 - `HTTP 401` means the token is wrong, revoked or expired: generate a new one with `claude setup-token`.
-- `.claude.tokens` holds secrets. It is gitignored; don't commit it, don't paste it into chats, and restrict its
-  permissions where you can (`chmod 600 .claude.tokens` on Linux/macOS).
+- The tokens file holds secrets. Don't commit it, don't paste it into chats, and restrict its permissions where you can
+  (`chmod 600` on Linux/macOS).
+- The repo has no `LICENSE` file yet; `claude plugin validate` flags that only for submission to the public plugin
+  directory, not for installing from this marketplace.

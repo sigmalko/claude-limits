@@ -1,0 +1,11 @@
+{
+  "name": "subscription-limits",
+  "description": "Shows how much of the Claude Code subscription limits (5-hour and weekly window) each of your accounts has used, and when they reset",
+  "version": "1.0.0",
+  "author": {
+    "name": "sigmalko"
+  },
+  "homepage": "https://github.com/sigmalko/claude-limits",
+  "repository": "https://github.com/sigmalko/claude-limits",
+  "keywords": ["limits", "usage", "rate-limit", "subscription"]
+}
